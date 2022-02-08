@@ -1,0 +1,10 @@
+[package]
+name = "bouncy-balls"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cairo-rs = "0.15.1"
+cairo-sys-rs = { version = "0.15.1", features = ["xlib"] }
+rand = "0.8.4"
+x11 = "2.19.1"
