@@ -7,6 +7,7 @@ use cairo_sys::{
     cairo_xlib_surface_create,
 };
 use rand::Rng;
+use std::ops::IndexMut;
 use std::{f64::consts::PI, thread, time::Duration};
 use x11::xlib::{
     XCloseDisplay, XCreateSimpleWindow, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
@@ -18,6 +19,7 @@ const WIDTH: u32 = 1024;
 const WAIT: u64 = 5000;
 const NUM_BALLS: usize = 8;
 
+#[derive(Debug)]
 struct Ball {
     vx: f64,
     vy: f64,
@@ -47,15 +49,61 @@ fn init_ball() -> Vec<Ball> {
 fn update(dt: f64, balls: &mut Vec<Ball>) -> bool {
     let mut min = 0f64;
     for a in 0..NUM_BALLS {
-        let b = &balls[a];
-        #[allow(clippy::needless_range_loop)]
+        let mut ball_iter = balls.iter_mut();
+        let mut b = ball_iter.nth(a).unwrap();
         for c in 0..NUM_BALLS {
-            if a == c {
-                continue;
+            if let Some(b1) = ball_iter.nth(c) {
+                if (b.x - b1.x).abs() < b.r + b1.r && (b.y - b1.y).abs() < b.r + b1.r {
+                    let dist = ((b.x - b1.x).powf(2.0) + (b.y - b1.y).powf(2.0)).sqrt();
+                    if dist < b.r + b1.r {
+                        let theta = (b.y - b1.y).atan2(b.x - b1.x);
+                        let mag = 1000.0 * b.m * b1.m / dist;
+                        let diff = (b.r + b1.r - dist) / 2.0;
+                        b1.vx -= mag * theta.cos() / b1.m;
+                        b1.vy -= mag * theta.sin() / b1.m;
+                        b.vx += mag * theta.cos() / b.m;
+                        b.vy += mag * theta.sin() / b.m;
+                        b1.x -= diff * theta.cos();
+                        b1.y -= diff * theta.sin();
+                        b.x += diff * theta.cos();
+                        b.y += diff * theta.sin();
+                    }
+                }
             }
-            let b1 = &balls[c];
-            todo!();
         }
+        let fric = 25.0 * dt;
+        if b.vx > 0.0 {
+            b.vx -= if b.vx > fric { fric } else { b.vx };
+        }
+        if b.vx < 0.0 {
+            b.vx -= if b.vx < -fric { -fric } else { b.vy };
+        }
+        if b.vy > 0.0 {
+            b.vy -= if b.vy > fric { fric } else { b.vy };
+        }
+        if b.vy < 0.0 {
+            b.vy -= if b.vy < -fric { -fric } else { b.vy };
+        }
+        if b.x + b.r >= WIDTH as f64 {
+            b.vx = -(b.vx.abs());
+        }
+        if b.y + b.r >= HEIGHT as f64 {
+            b.vy = -(b.vy.abs());
+        }
+        if b.x - b.r <= 0.0 {
+            b.vx = b.vx.abs();
+        }
+        if b.y - b.r <= 0.0 {
+            b.vy = b.vy.abs();
+        }
+        if b.vx > min {
+            min = b.vx;
+        }
+        if b.vy > min {
+            min = b.vy;
+        }
+        b.x += dt * b.vx;
+        b.y += dt * b.vy;
     }
     min > 0.0
 }
@@ -89,7 +137,7 @@ fn main() {
         let cr = cairo_create(surface);
         let mut balls = init_ball();
         while r#loop(cr, surface, &mut balls) {
-            thread::sleep(Duration::from_millis(WAIT));
+            thread::sleep(Duration::from_micros(WAIT));
         }
         thread::sleep(Duration::from_secs(2));
         cairo_surface_destroy(surface);
