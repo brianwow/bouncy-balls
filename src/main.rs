@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use cairo::ffi::{cairo_create, cairo_surface_t, cairo_t};
 use cairo_sys::{cairo_arc, cairo_fill, cairo_pop_group_to_source, cairo_surface_flush};
 use cairo_sys::{
@@ -7,7 +5,6 @@ use cairo_sys::{
     cairo_xlib_surface_create,
 };
 use rand::Rng;
-use std::ops::IndexMut;
 use std::{f64::consts::PI, thread, time::Duration};
 use x11::xlib::{
     XCloseDisplay, XCreateSimpleWindow, XDefaultRootWindow, XDefaultScreen, XDefaultVisual,
@@ -51,23 +48,21 @@ fn update(dt: f64, balls: &mut Vec<Ball>) -> bool {
     for a in 0..NUM_BALLS {
         let mut ball_iter = balls.iter_mut();
         let mut b = ball_iter.nth(a).unwrap();
-        for c in 0..NUM_BALLS {
-            if let Some(b1) = ball_iter.nth(c) {
-                if (b.x - b1.x).abs() < b.r + b1.r && (b.y - b1.y).abs() < b.r + b1.r {
-                    let dist = ((b.x - b1.x).powf(2.0) + (b.y - b1.y).powf(2.0)).sqrt();
-                    if dist < b.r + b1.r {
-                        let theta = (b.y - b1.y).atan2(b.x - b1.x);
-                        let mag = 1000.0 * b.m * b1.m / dist;
-                        let diff = (b.r + b1.r - dist) / 2.0;
-                        b1.vx -= mag * theta.cos() / b1.m;
-                        b1.vy -= mag * theta.sin() / b1.m;
-                        b.vx += mag * theta.cos() / b.m;
-                        b.vy += mag * theta.sin() / b.m;
-                        b1.x -= diff * theta.cos();
-                        b1.y -= diff * theta.sin();
-                        b.x += diff * theta.cos();
-                        b.y += diff * theta.sin();
-                    }
+        for b1 in ball_iter {
+            if (b.x - b1.x).abs() < b.r + b1.r && (b.y - b1.y).abs() < b.r + b1.r {
+                let dist = ((b.x - b1.x).powf(2.0) + (b.y - b1.y).powf(2.0)).sqrt();
+                if dist < b.r + b1.r {
+                    let theta = (b.y - b1.y).atan2(b.x - b1.x);
+                    let mag = 1000.0 * b.m * b1.m / dist;
+                    let diff = (b.r + b1.r - dist) / 2.0;
+                    b1.vx -= mag * theta.cos() / b1.m;
+                    b1.vy -= mag * theta.sin() / b1.m;
+                    b.vx += mag * theta.cos() / b.m;
+                    b.vy += mag * theta.sin() / b.m;
+                    b1.x -= diff * theta.cos();
+                    b1.y -= diff * theta.sin();
+                    b.x += diff * theta.cos();
+                    b.y += diff * theta.sin();
                 }
             }
         }
